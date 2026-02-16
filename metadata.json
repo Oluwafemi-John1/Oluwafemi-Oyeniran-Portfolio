@@ -1,0 +1,7 @@
+{
+  "name": "Oyeniran Oluwafemi Portfolio",
+  "description": "A high-fidelity, space-themed portfolio featuring GSAP animations, particle systems, and a responsive layout.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
