@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, ViewChild, ElementRef, OnDestroy, ChangeDetectionStrategy, signal, HostListener } from '@angular/core';
+import { Component, AfterViewInit, ViewChild, ElementRef, OnDestroy, ChangeDetectionStrategy, signal, HostListener, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -6,18 +6,18 @@ declare var gsap: any;
 
 interface ProjectNode {
   id: string;
-  label: string; // Text for the ring
+  label: string;
   role: string;
   icon: string;
-  x: number; // Desktop X %
-  y: number; // Desktop Y %
-  mobileX: number; // Mobile X %
-  mobileY: number; // Mobile Y %
+  x: number;
+  y: number;
+  mobileX: number;
+  mobileY: number;
 }
 
 interface Connection {
-  from: number; // Index of start node
-  to: number; // Index of end node
+  from: number;
+  to: number;
 }
 
 @Component({
@@ -145,7 +145,7 @@ interface Connection {
                              </svg>
                         </div>
 
-                        <!-- Core Icon Circle (Smaller now) -->
+                        <!-- Core Icon Circle -->
                         <div class="w-14 h-14 md:w-20 md:h-20 rounded-full bg-[#0F172A]/80 backdrop-blur-md border border-slate-700/50 flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)] group-hover:border-accent group-hover:shadow-[0_0_50px_rgba(56,189,248,0.4)] group-hover:bg-[#0F172A] transition-all duration-300 z-20">
                             <span class="material-symbols-outlined text-2xl md:text-3xl text-slate-400 group-hover:text-white transition-all duration-300 group-hover:scale-110">{{ node.icon }}</span>
                         </div>
@@ -208,7 +208,7 @@ interface Connection {
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProjectsComponent implements AfterViewInit {
+export class ProjectsComponent implements AfterViewInit, OnDestroy {
   @ViewChild('header') header!: ElementRef;
   @ViewChild('nav') nav!: ElementRef;
   @ViewChild('sysStatus') sysStatus!: ElementRef;
@@ -218,20 +218,20 @@ export class ProjectsComponent implements AfterViewInit {
 
   isMobile = signal<boolean>(false);
 
-  // Expanded to 10 nodes with smaller spacing strategy
+  // Nodes with adjusted positions for desktop and specific mobile stack
   nodes: ProjectNode[] = [
-    { id: 'fiscal-monitor', label: 'FINANCIAL LEDGER INTEGRITY', role: 'FinTech', icon: 'account_balance', x: 20, y: 30, mobileX: 50, mobileY: 10 },
-    { id: 'nebula-core', label: 'EDUCATIONAL METRICS PHP', role: 'Backend', icon: 'school', x: 45, y: 15, mobileX: 50, mobileY: 20 },
-    { id: 'chronos', label: 'BITRATE STREAMING REACT', role: 'DevOps', icon: 'play_circle', x: 65, y: 35, mobileX: 50, mobileY: 30 },
-    { id: 'hyra', label: 'CULTURAL NARRATIVE MOBILE', role: 'Mobile', icon: 'phonelink_ring', x: 15, y: 60, mobileX: 50, mobileY: 40 },
-    { id: 'weather-stream', label: 'WEATHER API STREAM', role: 'Infrastr', icon: 'cloud', x: 85, y: 20, mobileX: 50, mobileY: 50 },
-    { id: 'void-analytics', label: 'NEXT.JS RETAIL GLOBAL', role: 'Data', icon: 'shopping_cart', x: 75, y: 65, mobileX: 50, mobileY: 60 },
+    { id: 'fiscal-monitor', label: 'FINANCIAL LEDGER', role: 'FinTech', icon: 'account_balance', x: 25, y: 35, mobileX: 50, mobileY: 20 },
+    { id: 'nebula-core', label: 'METRICS PHP', role: 'Backend', icon: 'school', x: 45, y: 20, mobileX: 20, mobileY: 35 },
+    { id: 'chronos', label: 'BITRATE STREAMING', role: 'DevOps', icon: 'play_circle', x: 65, y: 30, mobileX: 80, mobileY: 35 },
+    { id: 'hyra', label: 'CULTURAL MOBILE', role: 'Mobile', icon: 'phonelink_ring', x: 15, y: 60, mobileX: 30, mobileY: 50 },
+    { id: 'weather-stream', label: 'WEATHER API', role: 'Infrastr', icon: 'cloud', x: 80, y: 20, mobileX: 80, mobileY: 50 },
+    { id: 'void-analytics', label: 'RETAIL ANALYTICS', role: 'Data', icon: 'shopping_cart', x: 70, y: 55, mobileX: 20, mobileY: 65 },
     
     // New Nodes
-    { id: 'neural-bridge', label: 'NEURAL NET INTERFACE', role: 'AI', icon: 'psychology', x: 35, y: 75, mobileX: 50, mobileY: 70 },
-    { id: 'quantum-sentry', label: 'QUANTUM CRYPTO GUARD', role: 'Security', icon: 'security', x: 55, y: 55, mobileX: 50, mobileY: 80 },
-    { id: 'bio-sync', label: 'BIO-HEALTH ANALYTICS', role: 'Health', icon: 'monitor_heart', x: 85, y: 80, mobileX: 50, mobileY: 90 },
-    { id: 'iot-mesh', label: 'SMART CITY GRID IOT', role: 'IoT', icon: 'hub', x: 50, y: 90, mobileX: 50, mobileY: 100 },
+    { id: 'neural-bridge', label: 'NEURAL NET', role: 'AI', icon: 'psychology', x: 35, y: 70, mobileX: 70, mobileY: 65 },
+    { id: 'quantum-sentry', label: 'QUANTUM CRYPTO', role: 'Security', icon: 'security', x: 55, y: 50, mobileX: 50, mobileY: 80 },
+    { id: 'bio-sync', label: 'BIO-HEALTH', role: 'Health', icon: 'monitor_heart', x: 85, y: 70, mobileX: 25, mobileY: 90 },
+    { id: 'iot-mesh', label: 'SMART CITY', role: 'IoT', icon: 'hub', x: 55, y: 85, mobileX: 75, mobileY: 90 },
   ];
 
   connections: Connection[] = [
@@ -248,6 +248,8 @@ export class ProjectsComponent implements AfterViewInit {
     { from: 7, to: 5 }, // Quantum -> Void
   ];
 
+  private animationFrameId: any;
+
   @HostListener('window:resize')
   onResize() {
     this.checkMobile();
@@ -258,9 +260,13 @@ export class ProjectsComponent implements AfterViewInit {
   }
 
   private checkMobile() {
-    // Check if window is available (SSR safety)
     if (typeof window !== 'undefined') {
-        this.isMobile.set(window.innerWidth < 768);
+        const wasMobile = this.isMobile();
+        const nowMobile = window.innerWidth < 768;
+        if (wasMobile !== nowMobile) {
+            this.isMobile.set(nowMobile);
+            // Re-trigger layout animations if needed by GSAP
+        }
     }
   }
 
@@ -272,21 +278,12 @@ export class ProjectsComponent implements AfterViewInit {
     return { x: node.x, y: node.y };
   }
   
-  // Calculate path from Terminal to first node (Index 0 - Fiscal)
   terminalLinePath() {
-     if (this.isMobile()) return ''; // Hide on mobile or simplified
+     if (this.isMobile()) return ''; 
      
-     // Terminal output point (approximate based on styling)
-     // Terminal is at top: 32 (8rem) + height approx 200px. 
-     // Let's approximate the "connection point" of the terminal to be around:
-     // x: 10% (left) + width (approx) -> say 25%
-     // y: 30%
-     
-     // Hardcoded start point matching the visual design relative to the terminal's fixed position
      const startX = 25; 
      const startY = 22; 
-     
-     const endNode = this.getPos(0); // Fiscal Node
+     const endNode = this.getPos(0); 
      
      return `M ${startX}% ${startY}% L ${endNode.x}% ${endNode.y}%`;
   }
@@ -295,11 +292,18 @@ export class ProjectsComponent implements AfterViewInit {
     this.createStars();
     this.animateEntrance();
     this.animateCounter();
+    this.startFloatingAnimation();
+  }
+  
+  ngOnDestroy() {
+      gsap.killTweensOf('.node-wrapper');
+      gsap.killTweensOf('line');
+      gsap.killTweensOf(this.header.nativeElement);
   }
 
   createStars() {
     const container = this.starsContainer.nativeElement;
-    const count = 100; // Less dense, more "constellation" feel
+    const count = 100;
     
     for (let i = 0; i < count; i++) {
         const star = document.createElement('div');
@@ -331,7 +335,7 @@ export class ProjectsComponent implements AfterViewInit {
       .to(this.nav.nativeElement, { opacity: 1, y: 0, duration: 1, ease: 'back.out(1.7)' }, '-=0.8')
       .to(this.terminal.nativeElement, { opacity: 1, y: 0, duration: 1, ease: 'power3.out' }, '-=0.6');
 
-    // Animate Nodes popping in
+    // Pop in nodes
     gsap.from('.node-wrapper', {
         scale: 0,
         opacity: 0,
@@ -348,6 +352,21 @@ export class ProjectsComponent implements AfterViewInit {
         duration: 2,
         ease: 'power2.out',
         delay: 1
+    });
+  }
+  
+  startFloatingAnimation() {
+    // Serious Animation: "Anti-gravity" float for nodes
+    gsap.to('.node-wrapper', {
+        y: '+=15', // Float distance
+        duration: 3, // Slower duration for space feel
+        yoyo: true,
+        repeat: -1,
+        ease: 'sine.inOut',
+        stagger: {
+            each: 0.2,
+            from: 'random'
+        }
     });
   }
 

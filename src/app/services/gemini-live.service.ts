@@ -16,6 +16,7 @@ export class GeminiLiveService {
   public volume: WritableSignal<number> = signal(0);
   public error: WritableSignal<string | null> = signal(null);
 
+  // Explicitly pointing to the v1alpha endpoint for experimental models
   private readonly MODEL = 'models/gemini-2.0-flash-exp';
   private readonly HOST = 'generativelanguage.googleapis.com';
   private readonly PATH = '/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent';
@@ -54,7 +55,7 @@ export class GeminiLiveService {
 
       this.ws.onerror = (err) => {
         console.error('WebSocket Error:', err);
-        this.error.set('Connection Error');
+        this.error.set('Connection Error. Please check API Key.');
         this.disconnect();
       };
 
@@ -92,19 +93,12 @@ export class GeminiLiveService {
   private sendSetupMessage(instruction: string) {
     if (!this.ws) return;
     
-    // Use snake_case for WebSocket Protobuf mapping
+    // Simplest working config for v1alpha/gemini-2.0-flash-exp
     const setupMsg = {
       setup: {
         model: this.MODEL,
         generation_config: {
-          response_modalities: ["AUDIO"],
-          speech_config: {
-            voice_config: {
-              prebuilt_voice_config: {
-                voice_name: "Aoede"
-              }
-            }
-          }
+          response_modalities: ["AUDIO"]
         },
         system_instruction: {
           parts: [{ text: instruction }]
@@ -150,7 +144,6 @@ export class GeminiLiveService {
   private sendAudioChunk(base64: string) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
-    // Use snake_case for realtime_input
     const msg = {
       realtime_input: {
         media_chunks: [{
@@ -171,7 +164,6 @@ export class GeminiLiveService {
       try {
           const response = JSON.parse(data);
           
-          // The server sends snake_case responses
           if (response.server_content?.model_turn?.parts?.[0]?.inline_data) {
               const inlineData = response.server_content.model_turn.parts[0].inline_data;
               if (inlineData.mime_type.startsWith('audio/pcm')) {

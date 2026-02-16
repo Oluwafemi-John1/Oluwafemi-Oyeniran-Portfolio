@@ -15,14 +15,14 @@ declare var gsap: any;
       <main class="relative z-10 flex flex-col items-center text-center px-6 max-w-5xl mx-auto w-full h-full justify-center opacity-0" #mainContent>
         <div class="flex flex-col items-center gap-8">
           <div class="mb-2 text-accent opacity-90 scale-0" #icon>
-            <span class="material-symbols-outlined text-6xl font-extralight">architecture</span>
+            <span class="material-symbols-outlined text-6xl font-extralight drop-shadow-[0_0_15px_rgba(56,189,248,0.5)]">architecture</span>
           </div>
           
           <h1 class="font-display font-bold text-5xl md:text-7xl lg:text-8xl tracking-tight text-primary leading-tight uppercase text-shadow-glow translate-y-10 opacity-0" #title>
             Oyeniran Oluwafemi
           </h1>
           
-          <div class="inline-flex items-center gap-4 px-6 py-2 rounded-full border border-accent/30 bg-accent/5 backdrop-blur-md opacity-0 scale-90" #badge>
+          <div class="inline-flex items-center gap-4 px-6 py-2 rounded-full border border-accent/30 bg-accent/5 backdrop-blur-md opacity-0 scale-90 hover:bg-accent/10 transition-colors duration-300" #badge>
             <span class="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_#38BDF8] animate-pulse"></span>
             <span class="font-code text-xs md:text-sm tracking-[0.4em] text-accent uppercase font-medium">Software Engineer</span>
           </div>
@@ -35,7 +35,7 @@ declare var gsap: any;
       </main>
 
       <nav class="fixed bottom-12 left-1/2 -translate-x-1/2 z-20 w-auto opacity-0 translate-y-10" #nav>
-        <div class="glass-dock px-3 p-2 rounded-full flex items-center gap-1 transition-all duration-700 hover:shadow-accent/20">
+        <div class="glass-dock px-3 p-2 rounded-full flex items-center gap-1 transition-all duration-700 hover:shadow-accent/20 hover:scale-105">
           <a class="group relative flex items-center gap-3 px-6 py-3 rounded-full hover:bg-white/5 transition-all duration-500" routerLink="/projects">
             <span class="material-symbols-outlined text-slate-muted group-hover:text-accent transition-colors text-[20px]">hub</span>
             <span class="text-sm font-display tracking-widest text-slate-text group-hover:text-primary transition-colors uppercase">Projects</span>
@@ -125,14 +125,13 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     window.addEventListener('resize', this.resizeListener);
     window.addEventListener('mousemove', this.mouseMoveListener);
     
-    this.resizeListener(); // Initial sizing
+    this.resizeListener(); 
     this.animate();
   }
 
   private createParticles() {
     this.particles = [];
-    // Increased density: Divider changed from 15000 to 11000
-    const particleCount = Math.floor((this.width * this.height) / 11000); 
+    const particleCount = Math.floor((this.width * this.height) / 10000); 
     
     for (let i = 0; i < particleCount; i++) {
       this.particles.push(new Particle(this.width, this.height));
@@ -142,12 +141,15 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   private animate() {
     this.ctx.clearRect(0, 0, this.width, this.height);
     
-    // Slight rotation of the entire context to simulate galaxy drift
-    const time = Date.now() * 0.0001;
     this.ctx.save();
-
+    
+    // Pulse effect in background
+    const time = Date.now() * 0.001;
+    
     this.particles.forEach(p => {
       p.update(this.mouse.x, this.mouse.y, this.width, this.height);
+      // Dynamic pulsing size based on sine wave
+      p.currentSize = p.size + Math.sin(time + p.x) * 0.5;
       p.draw(this.ctx);
     });
 
@@ -158,7 +160,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   private drawConnections() {
-    const connectionDistance = 160; // Slightly increased distance
+    const connectionDistance = 180;
     
     for (let i = 0; i < this.particles.length; i++) {
       for (let j = i + 1; j < this.particles.length; j++) {
@@ -170,11 +172,10 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist < connectionDistance) {
-            // Increased opacity multiplier from 0.15 to 0.5 for much better visibility
-            const opacity = (1 - (dist / connectionDistance)) * 0.5;
+            const opacity = (1 - (dist / connectionDistance)) * 0.4;
             this.ctx.beginPath();
-            this.ctx.strokeStyle = `rgba(56, 189, 248, ${opacity})`; // Accent color lines
-            this.ctx.lineWidth = 1;
+            this.ctx.strokeStyle = `rgba(56, 189, 248, ${opacity})`;
+            this.ctx.lineWidth = 0.5;
             this.ctx.moveTo(p1.x, p1.y);
             this.ctx.lineTo(p2.x, p2.y);
             this.ctx.stroke();
@@ -190,47 +191,37 @@ class Particle {
   vx: number;
   vy: number;
   size: number;
-  baseX: number;
-  baseY: number;
-  angle: number;
-  radius: number;
-
+  currentSize: number;
+  
   constructor(width: number, height: number) {
     this.x = Math.random() * width;
     this.y = Math.random() * height;
-    this.baseX = this.x;
-    this.baseY = this.y;
-    // Velocity
-    this.vx = (Math.random() - 0.5) * 0.2;
-    this.vy = (Math.random() - 0.5) * 0.2;
-    this.size = Math.random() * 2;
     
-    // Orbital properties
-    this.angle = Math.random() * Math.PI * 2;
-    this.radius = Math.random() * 100 + 20; 
+    // Slightly faster velocity
+    this.vx = (Math.random() - 0.5) * 0.4;
+    this.vy = (Math.random() - 0.5) * 0.4;
+    
+    this.size = Math.random() * 2;
+    this.currentSize = this.size;
   }
 
   update(mouseX: number, mouseY: number, width: number, height: number) {
-    // Basic movement
     this.x += this.vx;
     this.y += this.vy;
 
-    // Boundary check / bounce
     if (this.x < 0 || this.x > width) this.vx *= -1;
     if (this.y < 0 || this.y > height) this.vy *= -1;
 
-    // Mouse interaction - repel
+    // Mouse Repel
     const dx = mouseX - this.x;
     const dy = mouseY - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxDistance = 200;
+    const maxDistance = 250; // Larger interaction radius
     
     if (distance < maxDistance) {
-      const forceDirectionX = dx / distance;
-      const forceDirectionY = dy / distance;
       const force = (maxDistance - distance) / maxDistance;
-      const directionX = forceDirectionX * force * 1.5;
-      const directionY = forceDirectionY * force * 1.5;
+      const directionX = (dx / distance) * force * 2;
+      const directionY = (dy / distance) * force * 2;
 
       this.x -= directionX;
       this.y -= directionY;
@@ -239,9 +230,8 @@ class Particle {
 
   draw(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    // Increased base opacity from 0.2 to 0.4
-    ctx.fillStyle = `rgba(248, 250, 252, ${Math.random() * 0.5 + 0.4})`;
+    ctx.arc(this.x, this.y, Math.max(0, this.currentSize), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(248, 250, 252, ${Math.random() * 0.3 + 0.3})`;
     ctx.fill();
   }
 }
