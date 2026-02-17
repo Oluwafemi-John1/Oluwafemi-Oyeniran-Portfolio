@@ -12,8 +12,9 @@ declare var gsap: any;
     <div class="h-screen w-screen flex flex-col items-center justify-center relative selection:bg-accent selection:text-bg-void overflow-hidden bg-black cursor-none">
       
       <!-- Custom Cursor Elements -->
-      <div #cursorDot class="fixed w-1.5 h-1.5 bg-accent rounded-full pointer-events-none z-[100] mix-blend-difference"></div>
-      <div #cursorRing class="fixed w-8 h-8 border border-accent/50 rounded-full pointer-events-none z-[100] mix-blend-difference transition-opacity duration-300"></div>
+      <!-- Fixed top-0 left-0 to ensure coordinate system is consistent -->
+      <div #cursorDot class="fixed top-0 left-0 w-1.5 h-1.5 bg-accent rounded-full pointer-events-none z-[100] mix-blend-difference"></div>
+      <div #cursorRing class="fixed top-0 left-0 w-8 h-8 border border-accent/50 rounded-full pointer-events-none z-[100] mix-blend-difference"></div>
 
       <!-- Canvas: Full Opacity for better visibility -->
       <canvas #generativeCanvas class="absolute top-0 left-0 w-full h-full z-0 pointer-events-none opacity-100"></canvas>
@@ -94,6 +95,8 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   private mouse = { x: -1000, y: -1000 };
   private resizeListener!: () => void;
   private mouseMoveListener!: (e: MouseEvent) => void;
+  private mouseDownListener!: () => void;
+  private mouseUpListener!: () => void;
 
   ngAfterViewInit() {
     this.initCanvas();
@@ -105,30 +108,53 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     cancelAnimationFrame(this.animationFrameId);
     window.removeEventListener('resize', this.resizeListener);
     window.removeEventListener('mousemove', this.mouseMoveListener);
+    window.removeEventListener('mousedown', this.mouseDownListener);
+    window.removeEventListener('mouseup', this.mouseUpListener);
     gsap.killTweensOf(this.cursorDot.nativeElement);
     gsap.killTweensOf(this.cursorRing.nativeElement);
   }
 
   private initCursor() {
-    gsap.set(this.cursorDot.nativeElement, { xPercent: -50, yPercent: -50 });
-    gsap.set(this.cursorRing.nativeElement, { xPercent: -50, yPercent: -50 });
+    // Hide initially to avoid jump from top-left
+    gsap.set([this.cursorDot.nativeElement, this.cursorRing.nativeElement], { opacity: 0 });
+    // Center alignment for the elements
+    gsap.set([this.cursorDot.nativeElement, this.cursorRing.nativeElement], { xPercent: -50, yPercent: -50 });
 
-    const xToDot = gsap.quickTo(this.cursorDot.nativeElement, "x", { duration: 0.1, ease: "power3" });
-    const yToDot = gsap.quickTo(this.cursorDot.nativeElement, "y", { duration: 0.1, ease: "power3" });
-    const xToRing = gsap.quickTo(this.cursorRing.nativeElement, "x", { duration: 0.6, ease: "power3" });
-    const yToRing = gsap.quickTo(this.cursorRing.nativeElement, "y", { duration: 0.6, ease: "power3" });
+    // Smooth follower for the ring
+    const xToRing = gsap.quickTo(this.cursorRing.nativeElement, "x", { duration: 0.4, ease: "power2.out" });
+    const yToRing = gsap.quickTo(this.cursorRing.nativeElement, "y", { duration: 0.4, ease: "power2.out" });
 
     this.mouseMoveListener = (e: MouseEvent) => {
+      // Initialize visibility and position on first move
+      if (this.mouse.x === -1000) {
+           gsap.set([this.cursorDot.nativeElement, this.cursorRing.nativeElement], { opacity: 1 });
+           // Snap ring to start so it doesn't fly in
+           gsap.set(this.cursorRing.nativeElement, { x: e.clientX, y: e.clientY });
+      }
+
       this.mouse.x = e.clientX;
       this.mouse.y = e.clientY;
 
-      xToDot(e.clientX);
-      yToDot(e.clientY);
+      // INSTANT update for the dot - no lag
+      gsap.set(this.cursorDot.nativeElement, { x: e.clientX, y: e.clientY });
+      
+      // Smooth update for the ring
       xToRing(e.clientX);
       yToRing(e.clientY);
     };
 
+    // Click feedback
+    this.mouseDownListener = () => {
+        gsap.to(this.cursorRing.nativeElement, { scale: 0.5, duration: 0.1 });
+    };
+
+    this.mouseUpListener = () => {
+        gsap.to(this.cursorRing.nativeElement, { scale: 1, duration: 0.2 });
+    };
+
     window.addEventListener('mousemove', this.mouseMoveListener);
+    window.addEventListener('mousedown', this.mouseDownListener);
+    window.addEventListener('mouseup', this.mouseUpListener);
   }
 
   private animateEntrance() {
@@ -160,8 +186,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
   private createParticles() {
     this.particles = [];
-    // Increase density: Lower divisor = More particles
-    // Changed from 12000 to 6000 for 2x density
+    // High Density: Lower divisor = More particles
     const particleCount = Math.floor((this.width * this.height) / 6000); 
     
     for (let i = 0; i < particleCount; i++) {
@@ -201,7 +226,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist < connectionDistance) {
-            // Increase opacity multiplier (0.5) for better visibility
+            // High visibility opacity
             const opacity = (1 - (dist / connectionDistance)) * 0.5;
             this.ctx.beginPath();
             this.ctx.strokeStyle = `rgba(56, 189, 248, ${opacity})`;
@@ -257,7 +282,7 @@ class Particle {
   draw(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
     ctx.arc(this.x, this.y, Math.max(0, this.currentSize), 0, Math.PI * 2);
-    // Increase opacity floor for brighter particles
+    // Bright white/blue particles
     ctx.fillStyle = `rgba(248, 250, 252, ${Math.random() * 0.4 + 0.5})`;
     ctx.fill();
   }
