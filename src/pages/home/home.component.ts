@@ -9,8 +9,14 @@ declare var gsap: any;
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <div class="h-screen w-screen flex flex-col items-center justify-center relative selection:bg-accent selection:text-bg-void overflow-hidden">
-      <canvas #generativeCanvas class="absolute top-0 left-0 w-full h-full z-0 pointer-events-none"></canvas>
+    <div class="h-screen w-screen flex flex-col items-center justify-center relative selection:bg-accent selection:text-bg-void overflow-hidden bg-black cursor-none">
+      
+      <!-- Custom Cursor Elements -->
+      <div #cursorDot class="fixed w-1.5 h-1.5 bg-accent rounded-full pointer-events-none z-[100] mix-blend-difference"></div>
+      <div #cursorRing class="fixed w-8 h-8 border border-accent/50 rounded-full pointer-events-none z-[100] mix-blend-difference transition-opacity duration-300"></div>
+
+      <!-- Canvas: Full Opacity for better visibility -->
+      <canvas #generativeCanvas class="absolute top-0 left-0 w-full h-full z-0 pointer-events-none opacity-100"></canvas>
       
       <main class="relative z-10 flex flex-col items-center text-center px-6 max-w-5xl mx-auto w-full h-full justify-center opacity-0" #mainContent>
         <div class="flex flex-col items-center gap-8">
@@ -36,19 +42,19 @@ declare var gsap: any;
 
       <nav class="fixed bottom-12 left-1/2 -translate-x-1/2 z-20 w-auto opacity-0 translate-y-10" #nav>
         <div class="glass-dock px-3 p-2 rounded-full flex items-center gap-1 transition-all duration-700 hover:shadow-accent/20 hover:scale-105">
-          <a class="group relative flex items-center gap-3 px-6 py-3 rounded-full hover:bg-white/5 transition-all duration-500" routerLink="/projects">
+          <a class="group relative flex items-center gap-3 px-6 py-3 rounded-full hover:bg-white/5 transition-all duration-500 cursor-none" routerLink="/projects">
             <span class="material-symbols-outlined text-slate-muted group-hover:text-accent transition-colors text-[20px]">hub</span>
             <span class="text-sm font-display tracking-widest text-slate-text group-hover:text-primary transition-colors uppercase">Projects</span>
             <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent opacity-0 group-hover:opacity-100 transition-all duration-500 blur-[1px]"></div>
           </a>
           <div class="w-[1px] h-6 bg-white/10 mx-1"></div>
-          <a class="group relative flex items-center gap-3 px-6 py-3 rounded-full hover:bg-white/5 transition-all duration-500" routerLink="/writing">
+          <a class="group relative flex items-center gap-3 px-6 py-3 rounded-full hover:bg-white/5 transition-all duration-500 cursor-none" routerLink="/writing">
             <span class="material-symbols-outlined text-slate-muted group-hover:text-accent transition-colors text-[20px]">menu_book</span>
             <span class="text-sm font-display tracking-widest text-slate-text group-hover:text-primary transition-colors uppercase">Writing</span>
             <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent opacity-0 group-hover:opacity-100 transition-all duration-500 blur-[1px]"></div>
           </a>
           <div class="w-[1px] h-6 bg-white/10 mx-1"></div>
-          <a class="group relative flex items-center gap-3 px-6 py-3 rounded-full hover:bg-white/5 transition-all duration-500" routerLink="/contact">
+          <a class="group relative flex items-center gap-3 px-6 py-3 rounded-full hover:bg-white/5 transition-all duration-500 cursor-none" routerLink="/contact">
             <span class="material-symbols-outlined text-slate-muted group-hover:text-accent transition-colors text-[20px]">terminal</span>
             <span class="text-sm font-display tracking-widest text-slate-text group-hover:text-primary transition-colors uppercase">Contact</span>
             <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent opacity-0 group-hover:opacity-100 transition-all duration-500 blur-[1px]"></div>
@@ -56,8 +62,10 @@ declare var gsap: any;
         </div>
       </nav>
 
-      <div class="fixed inset-0 pointer-events-none z-[5] bg-[radial-gradient(circle_at_center,transparent_0%,rgba(15,23,42,0.8)_100%)]"></div>
-      <div class="fixed inset-0 pointer-events-none z-[1] opacity-[0.03]" style="background-image: linear-gradient(#F8FAFC 1px, transparent 1px), linear-gradient(90deg, #F8FAFC 1px, transparent 1px); background-size: 60px 60px;"></div>
+      <!-- Darker Radial Gradient to Pure Black -->
+      <div class="fixed inset-0 pointer-events-none z-[5] bg-[radial-gradient(circle_at_center,transparent_0%,#000000_100%)]"></div>
+      <!-- Subtle Grid -->
+      <div class="fixed inset-0 pointer-events-none z-[1] opacity-[0.03]" style="background-image: linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px); background-size: 60px 60px;"></div>
     </div>
   `,
   styles: [`
@@ -75,6 +83,8 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   @ViewChild('badge') badge!: ElementRef;
   @ViewChild('desc') desc!: ElementRef;
   @ViewChild('nav') nav!: ElementRef;
+  @ViewChild('cursorDot') cursorDot!: ElementRef;
+  @ViewChild('cursorRing') cursorRing!: ElementRef;
 
   private ctx!: CanvasRenderingContext2D;
   private animationFrameId: number = 0;
@@ -88,12 +98,37 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     this.initCanvas();
     this.animateEntrance();
+    this.initCursor();
   }
 
   ngOnDestroy() {
     cancelAnimationFrame(this.animationFrameId);
     window.removeEventListener('resize', this.resizeListener);
     window.removeEventListener('mousemove', this.mouseMoveListener);
+    gsap.killTweensOf(this.cursorDot.nativeElement);
+    gsap.killTweensOf(this.cursorRing.nativeElement);
+  }
+
+  private initCursor() {
+    gsap.set(this.cursorDot.nativeElement, { xPercent: -50, yPercent: -50 });
+    gsap.set(this.cursorRing.nativeElement, { xPercent: -50, yPercent: -50 });
+
+    const xToDot = gsap.quickTo(this.cursorDot.nativeElement, "x", { duration: 0.1, ease: "power3" });
+    const yToDot = gsap.quickTo(this.cursorDot.nativeElement, "y", { duration: 0.1, ease: "power3" });
+    const xToRing = gsap.quickTo(this.cursorRing.nativeElement, "x", { duration: 0.6, ease: "power3" });
+    const yToRing = gsap.quickTo(this.cursorRing.nativeElement, "y", { duration: 0.6, ease: "power3" });
+
+    this.mouseMoveListener = (e: MouseEvent) => {
+      this.mouse.x = e.clientX;
+      this.mouse.y = e.clientY;
+
+      xToDot(e.clientX);
+      yToDot(e.clientY);
+      xToRing(e.clientX);
+      yToRing(e.clientY);
+    };
+
+    window.addEventListener('mousemove', this.mouseMoveListener);
   }
 
   private animateEntrance() {
@@ -117,13 +152,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       this.createParticles();
     };
     
-    this.mouseMoveListener = (e: MouseEvent) => {
-      this.mouse.x = e.clientX;
-      this.mouse.y = e.clientY;
-    };
-
     window.addEventListener('resize', this.resizeListener);
-    window.addEventListener('mousemove', this.mouseMoveListener);
     
     this.resizeListener(); 
     this.animate();
@@ -131,7 +160,9 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
   private createParticles() {
     this.particles = [];
-    const particleCount = Math.floor((this.width * this.height) / 10000); 
+    // Increase density: Lower divisor = More particles
+    // Changed from 12000 to 6000 for 2x density
+    const particleCount = Math.floor((this.width * this.height) / 6000); 
     
     for (let i = 0; i < particleCount; i++) {
       this.particles.push(new Particle(this.width, this.height));
@@ -143,12 +174,10 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     
     this.ctx.save();
     
-    // Pulse effect in background
     const time = Date.now() * 0.001;
     
     this.particles.forEach(p => {
       p.update(this.mouse.x, this.mouse.y, this.width, this.height);
-      // Dynamic pulsing size based on sine wave
       p.currentSize = p.size + Math.sin(time + p.x) * 0.5;
       p.draw(this.ctx);
     });
@@ -172,7 +201,8 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist < connectionDistance) {
-            const opacity = (1 - (dist / connectionDistance)) * 0.4;
+            // Increase opacity multiplier (0.5) for better visibility
+            const opacity = (1 - (dist / connectionDistance)) * 0.5;
             this.ctx.beginPath();
             this.ctx.strokeStyle = `rgba(56, 189, 248, ${opacity})`;
             this.ctx.lineWidth = 0.5;
@@ -196,11 +226,8 @@ class Particle {
   constructor(width: number, height: number) {
     this.x = Math.random() * width;
     this.y = Math.random() * height;
-    
-    // Slightly faster velocity
     this.vx = (Math.random() - 0.5) * 0.4;
     this.vy = (Math.random() - 0.5) * 0.4;
-    
     this.size = Math.random() * 2;
     this.currentSize = this.size;
   }
@@ -212,11 +239,10 @@ class Particle {
     if (this.x < 0 || this.x > width) this.vx *= -1;
     if (this.y < 0 || this.y > height) this.vy *= -1;
 
-    // Mouse Repel
     const dx = mouseX - this.x;
     const dy = mouseY - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxDistance = 250; // Larger interaction radius
+    const maxDistance = 250; 
     
     if (distance < maxDistance) {
       const force = (maxDistance - distance) / maxDistance;
@@ -231,7 +257,8 @@ class Particle {
   draw(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
     ctx.arc(this.x, this.y, Math.max(0, this.currentSize), 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(248, 250, 252, ${Math.random() * 0.3 + 0.3})`;
+    // Increase opacity floor for brighter particles
+    ctx.fillStyle = `rgba(248, 250, 252, ${Math.random() * 0.4 + 0.5})`;
     ctx.fill();
   }
 }
